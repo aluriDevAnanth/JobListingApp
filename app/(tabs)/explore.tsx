@@ -1,109 +1,162 @@
-import { StyleSheet, Image, Platform } from 'react-native';
+// src/screens/BookmarkedJobsScreen.tsx
+import { useEffect, useState } from "react";
+import {
+  View,
+  ScrollView,
+  Text,
+  ActivityIndicator,
+  RefreshControl,
+  TouchableOpacity,
+} from "react-native";
+import { ThemedText } from "@/components/ThemedText";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Colors } from "@/constants/Colors";
+import { getBookmarks } from "../../src/database/database";
+import { jobDBType } from "@/src/typesAndSchemas/jobs";
+import { Ionicons } from "@expo/vector-icons";
 
-import { Collapsible } from '@/components/Collapsible';
-import { ExternalLink } from '@/components/ExternalLink';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-import { IconSymbol } from '@/components/ui/IconSymbol';
+import { removeBookmark } from "@/src/database/database";
 
-export default function TabTwoScreen() {
+import { useBookmarkContext } from "@/src/contexts/BookmarkCon";
+
+export default function BookmarkedJobsScreen() {
+  const { jobs, setJobs, jobIds, setJobIds } = useBookmarkContext();
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+
+    setTimeout(() => {
+      setRefreshing(false);
+      const loadJobs = async () => {
+        try {
+          const savedJobs = (await getBookmarks()) as jobDBType[];
+
+          setJobs(savedJobs);
+        } catch (error) {
+          console.error("Failed to load bookmarked jobs:", error);
+        } finally {
+          setLoading(false);
+        }
+      };
+      loadJobs();
+    }, 2000);
+  };
+
+  useEffect(() => {
+    setJobIds(new Set(jobs.map((j) => j.id)));
+  }, [jobs]);
+
+  useEffect(() => {
+    const loadJobs = async () => {
+      try {
+        const savedJobs = (await getBookmarks()) as jobDBType[];
+        setJobs(savedJobs);
+      } catch (error) {
+        console.error("Failed to load bookmarked jobs:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadJobs();
+  }, []);
+
+  const loadBookmarks = async () => {
+    try {
+      const bookmarks = (await getBookmarks()) as jobDBType[];
+      const bookmarkIds = new Set(bookmarks.map((b) => b.id));
+      setJobIds(bookmarkIds);
+      setJobs(bookmarks);
+    } catch (error) {
+      console.error("Error loading bookmarks:", error);
+    }
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Explore</ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image source={require('@/assets/images/react-logo.png')} style={{ alignSelf: 'center' }} />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Custom fonts">
-        <ThemedText>
-          Open <ThemedText type="defaultSemiBold">app/_layout.tsx</ThemedText> to see how to load{' '}
-          <ThemedText style={{ fontFamily: 'SpaceMono' }}>
-            custom fonts such as this one.
-          </ThemedText>
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/versions/latest/sdk/font">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user's current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful <ThemedText type="defaultSemiBold">react-native-reanimated</ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
+    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.dark.background }}>
+      <View style={{ flex: 1 }}>
+        <Text
+          style={{
+            borderBottomColor: "#fff",
+            borderBottomWidth: 3,
+            fontSize: 40,
+            fontWeight: "bold",
+            textAlign: "center",
+            marginBottom: 10,
+            color: "white",
+          }}
+        >
+          Bookmarked Jobs
+        </Text>
+        {loading ? (
+          <ActivityIndicator size="large" color="#0000ff" />
+        ) : jobs.length === 0 ? (
+          <Text style={{ color: "white", textAlign: "center", marginTop: 20 }}>
+            No bookmarked jobs found
+          </Text>
+        ) : (
+          <ScrollView
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={["#FF0000", "#00FF00", "#0000FF"]}
+                tintColor="#FFFFFF"
+                title="Pull to refresh"
+                titleColor="#FFFFFF"
+              />
+            }
+            style={{ padding: 10 }}
+          >
+            {jobs.map((job: jobDBType) => (
+              <View
+                key={job.id}
+                style={{
+                  backgroundColor: "#1e1e1e",
+                  padding: 10,
+                  borderRadius: 5,
+                  marginBottom: 10,
+                  borderColor: "white",
+                  borderWidth: 1,
+                }}
+              >
+                <TouchableOpacity
+                  style={{
+                    position: "absolute",
+                    bottom: 10,
+                    right: 10,
+                    backgroundColor: "rgba(30, 30, 30, 0.7)",
+                    borderRadius: 20,
+                    padding: 5,
+                    zIndex: 1,
+                  }}
+                  onPress={async () => {
+                    await removeBookmark(job.id.toString());
+                    await loadBookmarks();
+                  }}
+                >
+                  <Ionicons name="trash" size={24} color="red" />
+                </TouchableOpacity>
+                <ThemedText
+                  style={{ fontSize: 18, fontWeight: "bold", color: "white" }}
+                >
+                  {job.title}
+                </ThemedText>
+                <ThemedText style={{ color: "lightgray" }}>
+                  Location: {job.location || "N/A"}
+                </ThemedText>
+                <ThemedText style={{ color: "lightgray" }}>
+                  Salary: {job.salary || "N/A"}
+                </ThemedText>
+                <ThemedText style={{ color: "lightgray" }}>
+                  Phone: {job.phone || "N/A"}
+                </ThemedText>
+              </View>
+            ))}
+          </ScrollView>
+        )}
+      </View>
+    </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
-  },
-  titleContainer: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-});
