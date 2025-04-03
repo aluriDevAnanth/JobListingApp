@@ -5,7 +5,7 @@ import {
   Text,
   ActivityIndicator,
   TouchableOpacity,
-  Alert,
+  RefreshControl,
 } from "react-native";
 import { ThemedText } from "@/components/ThemedText";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -48,12 +48,13 @@ function HomeScreen() {
 
   const [jobs, setJobs] = useState<jobType[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const bookmarkCon = useBookmarkContext();
+  // const bookmarkCon = useBookmarkContext();
 
   useEffect(() => {
     const initialize = async () => {
@@ -66,19 +67,10 @@ function HomeScreen() {
 
   const fetchJobs = async () => {
     const data = await getJobs(page);
-
-    if (data.results.length === 0 && data?.error) {
-      setError(data.errorMsg);
-    }
-
+    if (data.results.length === 0 && data?.error) setError(data.errorMsg);
     const jobsData = data.results || [];
-
     setJobs((prevJobs) => [...prevJobs, ...jobsData]);
-
-    if (jobsData.length === 0) {
-      setHasMore(false);
-    }
-
+    if (jobsData.length === 0) setHasMore(false);
     setLoading(false);
     setLoadingMore(false);
   };
@@ -103,26 +95,6 @@ function HomeScreen() {
     }
   };
 
-  if (error) {
-    return (
-      <SafeAreaView
-        style={{ flex: 1, backgroundColor: Colors.dark.background }}
-      >
-        <View
-          style={{
-            flex: 1,
-            padding: 10,
-            alignContent: "center",
-            justifyContent: "center",
-            width: "100%",
-          }}
-        >
-          <Text style={{ color: "white" }}>{error}</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   const loadMoreJobs = () => {
     if (!loadingMore && hasMore) {
       setLoadingMore(true);
@@ -136,36 +108,69 @@ function HomeScreen() {
     }
   }, [page]);
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    setPage(1);
+    setHasMore(true);
+    const data = await getJobs(1);
+    if (data.results.length === 0 && data?.error) setError(data.errorMsg);
+    setJobs(data.results);
+    setRefreshing(false);
+  };
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: Colors.dark.background }}>
-      {loading ? (
-        <View
+      <View style={{ flex: 1, padding: 10 }}>
+        <Text
           style={{
-            flex: 1,
-            justifyContent: "center",
-            alignItems: "center",
-            backgroundColor: Colors.dark.background,
+            borderBottomColor: "#fff",
+            borderBottomWidth: 3,
+            fontSize: 40,
+            fontWeight: "bold",
+            textAlign: "center",
+            marginBottom: 10,
+            color: "white",
           }}
         >
-          <ActivityIndicator size="large" color="#0000ff" />
-        </View>
-      ) : (
-        <View style={{ flex: 1, padding: 10 }}>
-          <Text
+          Jobs List
+        </Text>
+        {error ? (
+          <View
             style={{
-              borderBottomColor: "#fff",
-              borderBottomWidth: 3,
-              fontSize: 40,
-              fontWeight: "bold",
-              textAlign: "center",
-              marginBottom: 10,
-              color: "white",
+              flex: 1,
+              justifyContent: "center",
+              alignItems: "center",
+              backgroundColor: Colors.dark.background,
             }}
           >
-            Jobs List
-          </Text>
+            <Text
+              style={{
+                fontSize: 20,
+                fontWeight: "bold",
+                textAlign: "center",
+                color: "red",
+              }}
+            >
+              {error}
+            </Text>
+          </View>
+        ) : loading ? (
+          <View
+            style={{
+              flex: 1,
+              justifyContent: "center",
+              alignItems: "center",
+              backgroundColor: Colors.dark.background,
+            }}
+          >
+            <ActivityIndicator size="large" color="#0000ff" />
+          </View>
+        ) : (
           <FlatList
             data={jobs}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
             keyExtractor={(item, index) => index.toString()}
             renderItem={({ item, index }) => (
               <View
@@ -251,8 +256,8 @@ function HomeScreen() {
               </>
             )}
           />
-        </View>
-      )}
+        )}
+      </View>
     </SafeAreaView>
   );
 }
